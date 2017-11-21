@@ -1,8 +1,26 @@
+<html>
+<body>
+<form action="main.php" method="POST" enctype="multipart/form-data">
+    Select a text file to upload:
+    <br>
+    <input type="file" name="fileToUpload" id="fileToUpload" size="1" accept="text/plain">
+    <br> <br>
+    <input type="submit" value="Upload File" name="submit">
+</form>
+
+</body>
+</html>
+
 <?php
+
+require_once "login.php";
+// create mysqli
+$conn = new mysqli($hn, $un, $pw);
 
 submitInput();
 
-function submitInput() {
+function submitInput()
+{
     // after user click submit button, the program start running
     if (isset($_POST["submit"])) {
 
@@ -24,41 +42,99 @@ function main()
         $fh = fopen("$path", 'r') or
         die("File does not exist or you lack permission to open it");
 
-        // We will read each line of the file and check for all numbers
-        while (($line = fgets($fh)) !== false) {
-            checkDig($line); // pass the line to check numbers
+        while(($line = fread($fh)) !== false) {
+            
         }
+
+
+
+//        // We will read each line of the file and store in a array as the content of row
+//        // until we see the separator '---'
+//        while (($line = fgets($fh)) !== false) {
+//            // If separator is not found, then keep pushing each line into array as table data.
+//            // once we see the separator '---', pass the array to process table function
+//            // to process data and empty array for next part of data.
+//
+//            if (trim($line) === "---") {
+//                processTable($tableArray);
+//                $tableArray = array();
+//                $counter = 0;
+//            } else {
+//                $tableArray[$counter] = trim($line);
+//                $counter++;
+//            }
+//        }
+//
+//        // get the last table
+//        processTable($tableArray);
 
         // close file
         fclose($fh);
     }
 }
 
-function checkDig($line) {
-    // First to store each word separated by space into an array
-    $a = explode(" ", $line);
+function processTable($tableArray)
+{
+    echo "<pre>";
+    print_r($tableArray);
+    echo "</pre>";
 
-    // The for loop will run through each element in the array and check it
-    for ($i = 0; $i < sizeof($a); $i++) {
-        // Clean all extra whitespace to prevent case like "1 " or " 3434 "
-        $a[$i] = preg_replace('/\s+/', '', $a[$i]);
+    global $conn;
 
-        // Print the word if it is number or number string
-        if (is_numeric($a[$i])) {
-            echo $a[$i], " ";
+    if ($conn->connect_error)
+        die($conn->connect_error);
+
+    // create database if it doesn't exist
+    $query = "CREATE DATABASE IF NOT EXISTS " . $tableArray[0];
+    $result = $conn->query($query);
+    if (!$result) die($conn->error);
+
+    //select db
+    mysqli_select_db($conn, $tableArray[0]);
+
+    // check if Table Exists
+    $exists = $conn->query("select 1 from " . $tableArray[1]);
+
+    // if the table doesn't exist, create one
+    if ($exists === FALSE) {
+        echo "This table doesn't exist, going to create one", "<br>";
+
+//        $query = "CREATE TABLE classics (
+//                      author VARCHAR(128),
+//                      title VARCHAR(128),
+//                      type VARCHAR(16),
+//                      year CHAR(4) ) ENGINE MyISAM;";
+
+        $query = "CREATE TABLE classics (
+                      col1 VARCHAR(128)";
+
+        // we don't know how many col will be in the table, loop the array and add into sql command
+
+        for ($i = 3; $i < count($tableArray); $i++) {
+            $query = $query . ", col" . (string)($i - 1) . " VARCHAR(128)";
         }
+
+        $query = $query . ") ENGINE MyISAM;";
+
+        $result = $conn->query($query);
+        if (!$result) die($conn->error);
     }
 
-    echo "<br>";
-}
+    // create insert query that insert values into table
+    $query = "INSERT INTO " . $tableArray[1];
 
-echo "<br>";
-echo "Here is the test case for checkDig functon: ", "<br>";
-checkDig("If Hamsik17 scores another goal, he will reach Maradona10 with 116 total scores in Napoli");
-checkDig("0 0 0 0 12");
-checkDig("123 alex334243234");
-checkDig("");
-checkDig("     ");
+    $query = $query . " VALUES ('" . $tableArray[2] . "'";
+
+    for ($i = 3; $i < count($tableArray); $i++) {
+        $query = $query . ", '" . $tableArray[$i] . "'";
+    }
+
+    $query = $query . ")";
+
+    // insert value into table, print error otherwise
+    $result = $conn->query($query);
+    if (!$result) die($conn->error);
+}
 
 function checker()
 {
