@@ -15,7 +15,7 @@
 
 require_once "login.php";
 // create mysqli
-$conn = new mysqli($hn, $un, $pw);
+$conn = new mysqli($hn, $un, $pw, $db);
 
 submitInput();
 
@@ -38,14 +38,15 @@ function main()
 
         echo "Reading from file \"", $name, "\"", "<br>";
 
-        // open the file with read option
-        $fh = fopen("$path", 'r') or
-        die("File does not exist or you lack permission to open it");
+        $content = file_get_contents($path);
+        $length = filesize($path);
 
-        while(($line = fread($fh)) !== false) {
-            
+        $binCon = '';
+        for ($i = 0; $i < ($length < 20? $length : 20); $i++) {
+            $binCon .= sprintf("%08b", ord($content[$i]));
         }
-
+        echo $binCon, "<br>";
+        var_dump($binCon);
 
 
 //        // We will read each line of the file and store in a array as the content of row
@@ -67,9 +68,6 @@ function main()
 //
 //        // get the last table
 //        processTable($tableArray);
-
-        // close file
-        fclose($fh);
     }
 }
 
@@ -156,5 +154,31 @@ function checker()
     // return ture if all cases are passed
     return true;
 }
+
+function selectQuery($selectOption, $table, $other) {
+    $query = "SELECT " . $selectOption . " FROM " . $table;
+
+    if ($other) {
+        $query = $query . " " . $other;
+    }
+
+    return $query;
+}
+
+function insertQuery($table, $data) {
+    $query = "INSERT INTO " . $table;
+
+    $query = $query . " VALUES ('" . $data[0] . "'";
+
+    for ($i = 1; $i < count($table); $i++) {
+        $query = $query . ", '" . $table[$i] . "'";
+    }
+
+    $query = $query . ")";
+
+    return $query;
+}
+
+
 
 ?>
