@@ -1,19 +1,35 @@
 <html>
 <body>
 <form action="main.php" method="POST" enctype="multipart/form-data">
-    Select a text file to upload:
+    Select a text file to check:
     <br>
     <input type="file" name="fileToUpload" id="fileToUpload" size="1" accept="text/plain">
     <br> <br>
     <input type="submit" value="Upload File" name="submit">
 </form>
 
-</body>
-</html>
-
 <?php
 
 require_once "login.php";
+//require_once "user.php";
+require_once "auth.php";
+
+if ($auth) {
+    echo <<<_END
+    <br><br>
+    <form action="main.php" method="POST" enctype="multipart/form-data">
+        Please upload a surely infected file:
+        <br>
+        <input type="file" name="adminFile" id="adminFile" size="1" accept="text/plain">
+        <br> <br>
+        <input type="submit" value="Upload File" name="adminSub">
+    </form>
+_END;
+}
+
+echo "</body></html>";
+
+
 // create mysqli
 $conn = new mysqli($hn, $un, $pw, $db);
 
@@ -23,13 +39,16 @@ function submitInput()
 {
     // after user click submit button, the program start running
     if (isset($_POST["submit"])) {
-
         // main function for the program
-        main();
+        checkMalicious();
+    }
+
+    if (isset($_POST["adminSub"])) {
+        insertMalicious();
     }
 }
 
-function main()
+function checkMalicious()
 {
     // Check if the file exist and in right type
     if (checker()) {
@@ -42,7 +61,7 @@ function main()
         $length = filesize($path);
 
         $binCon = '';
-        for ($i = 0; $i < ($length < 20? $length : 20); $i++) {
+        for ($i = 0; $i < ($length < 20 ? $length : 20); $i++) {
             $binCon .= sprintf("%08b", ord($content[$i]));
         }
         echo $binCon, "<br>";
@@ -68,6 +87,15 @@ function main()
 //
 //        // get the last table
 //        processTable($tableArray);
+    }
+}
+
+function insertMalicious() {
+    if (checkerAdmin()) {
+        $name = $_FILES['adminFile']['name']; // file name
+        $path = $_FILES['adminFile']['tmp_name']; // the tmp file that we will use to read
+
+        echo "Reading from file \"", $name, "\"", "<br>";
     }
 }
 
@@ -155,7 +183,29 @@ function checker()
     return true;
 }
 
-function selectQuery($selectOption, $table, $other) {
+function checkerAdmin()
+{
+    // User is able to click upload button without select any file
+    // This if will check file size, if the size is 0, which means that
+    // there is no file been selected
+    if ($_FILES['adminFile']['size'] === 0) {
+        echo "Please select a file to upload!!";
+        return false;
+    }
+
+    // The input type is limited to text file, but I will still check here
+    // If the type of file is not text, display warnning message
+    if ($_FILES['adminFile']['type'] !== 'text/plain') {
+        echo "Sorry, only txt files are allowed!!!";
+        return false;
+    }
+
+    // return ture if all cases are passed
+    return true;
+}
+
+function selectQuery($selectOption, $table, $other)
+{
     $query = "SELECT " . $selectOption . " FROM " . $table;
 
     if ($other) {
@@ -165,7 +215,8 @@ function selectQuery($selectOption, $table, $other) {
     return $query;
 }
 
-function insertQuery($table, $data) {
+function insertQuery($table, $data)
+{
     $query = "INSERT INTO " . $table;
 
     $query = $query . " VALUES ('" . $data[0] . "'";
@@ -178,7 +229,6 @@ function insertQuery($table, $data) {
 
     return $query;
 }
-
 
 
 ?>

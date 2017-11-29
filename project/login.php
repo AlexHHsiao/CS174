@@ -1,6 +1,6 @@
 <?php
-    $hn = "localhost";
-	$un = "root";
-	$pw = "";
-	$db = "cs174";
+$hn = "localhost";
+$un = "root";
+$pw = "";
+$db = "cs174";
 ?>
