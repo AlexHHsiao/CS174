@@ -22,14 +22,17 @@ if (isset($_SERVER['PHP_AUTH_USER']) && isset($_SERVER['PHP_AUTH_PW'])) {
             $auth = true;
         } else {
             echo "You are not authenticated as an admin, so you can only upload putative infected file to be checked!";
+            echo "<br>";
         }
     } else {
         echo "You are not authenticated as an admin, so you can only upload putative infected file to be checked!";
+        echo "<br>";
     }
 } else {    // if ($_SERVER['PHP_AUTH_USER'])  and  ($_SERVER['PHP_AUTH_PW']) are not set
     header('WWW-Authenticate: Basic realm="Restricted Section"');
     header('HTTP/1.0 401 Unauthorized');
     echo "You are not authenticated as an admin, so you can only upload putative infected file to be checked!";
+    echo "<br>";
 }
 $connection->close();
 

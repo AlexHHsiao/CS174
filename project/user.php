@@ -21,7 +21,11 @@ $password = "123456";
 
 $token = hash("ripemd128", "$salt1$password$salt2");
 
-add_user($connection, $forename, $surname, $username, $token);
+$exists = $connection->query("SELECT * FROM users WHERE username='$username'");
+
+if ($exists->num_rows === 0) {
+    add_user($connection, $forename, $surname, $username, $token);
+}
 
 function add_user($connection, $fn, $sn, $un, $pw)
 {
