@@ -14,6 +14,7 @@ require_once "login.php";
 require_once "user.php";
 require_once "auth.php";
 
+// if user is admin, display html for uploading surely infected file
 if ($auth) {
     echo <<<_END
     <br><br>
@@ -37,13 +38,15 @@ submitInput();
 
 function submitInput()
 {
-    // after user click submit button, the program start running
+    // after user click submit button, the program start checking malicious content
     if (isset($_POST["submit"])) {
-        // main function for the program
+        // check malicious content function for the program
         checkMalicious();
     }
 
+    // after admin click submint button, the program start uploading malicious content
     if (isset($_POST["adminSub"])) {
+        // upload malicious content function for the program
         insertMalicious();
     }
 }
@@ -59,33 +62,40 @@ function checkMalicious()
 
         echo "Checking file \"", $name, "\"", "<br>";
 
-        $content = file_get_contents($path);
-        $length = filesize($path);
+        $content = file_get_contents($path); // get all content of the file
+        $length = filesize($path); // get the size of all content
 
         $binCon = '';
+        // convert each word to binary format
         for ($i = 0; $i < $length; $i++) {
             $binCon .= sprintf("%08b", ord($content[$i]));
         }
 
+        // select all malicious content from database
         $query = "SELECT * FROM infected_info";
         $result = $conn->query($query);
         if (!$result) die($conn->error);
 
+        // use for loop to loop all malicious contents from database and check if the file
+        // contains any malicious content
         for ($i = 0; $i < $result->num_rows; $i++) {
 
             $row = $result->fetch_row();
 
+            // if malicious content is found, print the malicious content name and stop program
             if (strpos($binCon, $row[1]) !== false) {
                 echo "Found!!! The file " . $name . " contain malicious " . $row[0], "<br>";
                 return;
             }
         }
 
-        echo "The file " . $name . " is safe, and doesn't contain any malicious.";
+        echo "The file " . $name . " is safe, and doesn't contain any malicious content.";
     }
 }
 
 function insertMalicious() {
+
+    // Check if the file exist and in right type
     if (checkerAdmin()) {
 
         global $conn;
@@ -93,21 +103,29 @@ function insertMalicious() {
         $name = $_FILES['adminFile']['name']; // file name
         $path = $_FILES['adminFile']['tmp_name']; // the tmp file that we will use to read
 
-        echo "Reading from file \"", $name, "\"", "<br>";
+        echo "Reading from file \"", $name, "\"", "<br>"; // get all content of the file
+        // file name, which is also the malicious content name
         $maliciousName = substr($name, 0, strlen($name) - 4);
 
+        // first check if this malicious content exist in the database already.
         $exists = $conn->query("SELECT * FROM infected_info WHERE name='$maliciousName'");
 
+        // if the select query has length 0, which means that this malicious content doesn't exist in the database
         if ($exists->num_rows === 0) {
-            $content = file_get_contents($path);
-            $length = filesize($path);
+            $content = file_get_contents($path); // get all content of the file
+            $length = filesize($path); // get the length of all content
 
             $binCon = '';
+
+            // if the length of all content is less that 20, we select all content. Otherwise we will select
+            // the first 20 words in the file
             for ($i = 0; $i < ($length < 20 ? $length : 20); $i++) {
+                // convert each word into binary format
                 $binCon .= sprintf("%08b", ord($content[$i]));
                 echo $content[$i];
             }
 
+            // insert the malicious content into database (name, content)
             add_Mali($conn, $maliciousName, $binCon);
         }
     }
@@ -155,17 +173,7 @@ function checkerAdmin()
     return true;
 }
 
-function selectQuery($selectOption, $table, $other)
-{
-    $query = "SELECT " . $selectOption . " FROM " . $table;
-
-    if ($other) {
-        $query = $query . " " . $other;
-    }
-
-    return $query;
-}
-
+// helper function for inserting malicious content to the database
 function add_Mali($connection, $name, $bin)
 {
     $query = "INSERT INTO infected_info VALUES('$name', '$bin')";
