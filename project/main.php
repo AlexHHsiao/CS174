@@ -1,31 +1,110 @@
+<?php
+require_once "login.php";
+require_once "auth.php";
+?>
+<!DOCTYPE html>
+<head>
+    <style>
+        .login {
+            background-color: gray;
+            color: whitesmoke;
+            font-size: large;
+        }
+    </style>
+
+    <script>
+
+        // after submit the form, data will be check by each function
+        function validate(form) {
+            // check the name
+            fail = validateName(form.name.value);
+
+            // if there is a error, show it
+            if (fail === "") return true;
+            else {
+                alert(fail);
+                return false
+            }
+        }
+
+        function validateName(field) {
+            // if name is empty
+            if (field == "") return "No Malware Name was entered.\n"
+            else if (field.length < 5) // if name is less than 5 words
+                return "Malware Name must be at least 5 characters.\n"
+            else if (/[^a-zA-Z0-9_-]/.test(field)) // if name contains special char not allowed
+                return "Only a-z, A-Z, 0-9, - and _ allowed in Malware Name.\n"
+            return ""
+        }
+    </script>
+</head>
 <html>
 <body>
-<form action="main.php" method="POST" enctype="multipart/form-data">
-    Select a text file to check:
-    <br>
-    <input type="file" name="fileToUpload" id="fileToUpload" size="1" accept="text/plain">
-    <br> <br>
-    <input type="submit" value="Upload File" name="submit">
-</form>
+
+<?php
+echo <<<_END
+<div class="login">
+    <p>
+        $authMsg
+    </p>
+</div>
+_END;
+
+?>
+
+
+<table border="0" cellpadding="2" cellspacing="5" bgcolor="#eeeeee">
+    <form action="main.php" method="POST" enctype="multipart/form-data">
+        <th colspan="2" align="center">Select a text file to check</th>
+
+        <tr>
+            <td>
+                <input type="file" name="fileToUpload" id="fileToUpload" size="1" accept="text/plain">
+            </td>
+        </tr>
+
+        <tr>
+            <td colspan="2" align="center">
+                <input type="submit" value="Upload File" name="submit">
+            </td>
+        </tr>
+    </form>
+</table>
 
 <?php
 
-require_once "login.php";
-require_once "user.php";
-require_once "auth.php";
-
 // if user is admin, display html for uploading surely infected file
-if ($auth) {
+if (isset($_SESSION['username'])) {
     echo <<<_END
     <br><br>
-    <form action="main.php" method="POST" enctype="multipart/form-data">
-        Please upload a surely infected file:
-        <br>
-        <input type="file" name="adminFile" id="adminFile" size="1" accept="text/plain">
-        <br> <br>
-        <input type="submit" value="Upload File" name="adminSub">
-    </form>
+    <table border="0" cellpadding="2" cellspacing="5" bgcolor="#eeeeee">
+    
+        <th colspan="2" align="center">Please upload a surely infected file</th> 
+    
+        <form action="main.php" method="POST" enctype="multipart/form-data" onsubmit="return validate(this)">
+            <tr>
+            <td><input type="file" name="adminFile" id="adminFile" size="1" accept="text/plain">
+            </td>
+            </tr>
+
+            <tr>
+            <td>Malware Name</td>
+            <td>
+                <input type="text" maxlength="16" name="name">
+            </td>
+            </tr>
+            
+            <tr>
+            <td colspan="2" align="center">
+                <input type="submit" value="Upload File" name="adminSub">
+            </td>
+            </tr>
+          
+        </form>
+    </table>
 _END;
+
+    destroy_session_and_data();
 }
 
 echo "</body></html>";
@@ -93,10 +172,16 @@ function checkMalicious()
     }
 }
 
-function insertMalicious() {
-
+function insertMalicious()
+{
     // Check if the file exist and in right type
     if (checkerAdmin()) {
+        $malwareName = "";
+
+        // get the malware name
+        if (isset($_POST['name'])) {
+            $malwareName = fix_string($_POST['name']);
+        }
 
         global $conn;
 
@@ -104,11 +189,9 @@ function insertMalicious() {
         $path = $_FILES['adminFile']['tmp_name']; // the tmp file that we will use to read
 
         echo "Reading from file \"", $name, "\"", "<br>"; // get all content of the file
-        // file name, which is also the malicious content name
-        $maliciousName = substr($name, 0, strlen($name) - 4);
 
         // first check if this malicious content exist in the database already.
-        $exists = $conn->query("SELECT * FROM infected_info WHERE name='$maliciousName'");
+        $exists = $conn->query("SELECT * FROM infected_info WHERE name='$malwareName'");
 
         // if the select query has length 0, which means that this malicious content doesn't exist in the database
         if ($exists->num_rows === 0) {
@@ -122,11 +205,10 @@ function insertMalicious() {
             for ($i = 0; $i < ($length < 20 ? $length : 20); $i++) {
                 // convert each word into binary format
                 $binCon .= sprintf("%08b", ord($content[$i]));
-                echo $content[$i];
             }
 
             // insert the malicious content into database (name, content)
-            add_Mali($conn, $maliciousName, $binCon);
+            add_Mali($conn, $malwareName, $binCon);
         }
     }
 }
@@ -179,6 +261,22 @@ function add_Mali($connection, $name, $bin)
     $query = "INSERT INTO infected_info VALUES('$name', '$bin')";
     $result = $connection->query($query);
     if (!$result) die($connection->error);
+}
+
+// helper function for reading variable from html input
+function fix_string($string)
+{
+    if (get_magic_quotes_gpc())
+        $string = stripslashes($string);
+    return htmlentities($string);
+}
+
+function destroy_session_and_data() {
+    $_SESSION = array();
+    unset($_SERVER['PHP_AUTH_USER']);
+    unset($_SERVER['PHP_AUTH_PW']);
+    setcookie(session_name(), '', time() - 2592000, '/');
+    session_destroy();
 }
 
 ?>

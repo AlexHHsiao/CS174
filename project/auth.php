@@ -1,7 +1,7 @@
 <?php
 $connection = new mysqli($hn, $un, $pw, $db);
 
-$auth = false;
+$authMsg = "";
 
 if ($connection->connect_error) die($connection->connect_error);
 
@@ -29,24 +29,28 @@ if (isset($_SERVER['PHP_AUTH_USER']) && isset($_SERVER['PHP_AUTH_PW'])) {
 
         // if the password user entered matches with the password in the admin table, the user is authed as admin
         if ($token == $row[3]) {
-            echo "$row[0] $row[1] : Hi $row[0], you are now logged in as '$row[2]'";
-            $auth = true;
+
+            // store user information into session for future usage
+            session_start();
+            $_SESSION['username'] = $un_temp;
+            $_SESSION['password'] = $pw_temp;
+            $_SESSION['forename'] = $row[0];
+            $_SESSION['surname'] = $row[1];
+
+            $authMsg =  "$row[0] $row[1] : Hi $row[0], you are now logged in as '$row[2]'";
         } else {
             // if the password user entered doesn't matches with the password in the admin table, the user is not authed as admin
-            echo "You are not authenticated as an admin, so you can only upload putative infected file to be checked!";
-            echo "<br>";
+            $authMsg = "You are not authenticated as an admin, so you can only upload putative infected file to be checked!";
         }
     } else {
         // if the select query return no data, which means that the admin table is empty
 
-        echo "You are not authenticated as an admin, so you can only upload putative infected file to be checked!";
-        echo "<br>";
+        $authMsg = "You are not authenticated as an admin, so you can only upload putative infected file to be checked!";
     }
 } else {    // if ($_SERVER['PHP_AUTH_USER'])  and  ($_SERVER['PHP_AUTH_PW']) are not set
     header('WWW-Authenticate: Basic realm="Restricted Section"');
     header('HTTP/1.0 401 Unauthorized');
-    echo "You are not authenticated as an admin, so you can only upload putative infected file to be checked!";
-    echo "<br>";
+    $authMsg = "You are not authenticated as an admin, so you can only upload putative infected file to be checked!";
 }
 $connection->close();
 
@@ -60,5 +64,4 @@ function mysql_fix_string($connection, $string)
     if (get_magic_quotes_gpc()) $string = stripslashes($string);
     return $connection->real_escape_string($string);
 }
-
 ?>
